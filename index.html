@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>English Buddy — Daily Speaking Practice</title>
+<meta name="description" content="Practice spoken English every day with a friendly AI conversation partner. Free, installable, works on your phone.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#0E7C66">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="English Buddy">
+<link rel="icon" href="icon-192.png">
+
+<style>
+  :root{
+    --bg:#F4F7F6; --card:#FFFFFF; --ink:#16231F; --muted:#66776F;
+    --line:#E1E8E5; --brand:#0E7C66; --brand-dark:#0A5F50; --brand-light:#E4F3EF;
+    --user-bubble:#0E7C66; --user-bubble-ink:#FFFFFF;
+    --ai-bubble:#EEF3F1; --ai-bubble-ink:#16231F;
+    --danger:#C0392B; --warn:#B8860B;
+    --radius:16px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  button{font-family:inherit;}
+  .app{display:flex; flex-direction:column; height:100dvh; max-width:560px; margin:0 auto; width:100%; background:var(--bg); position:relative;}
+
+  /* ---------- header ---------- */
+  header{
+    display:flex; align-items:center; gap:.6rem; padding:.85rem 1rem;
+    background:var(--card); border-bottom:1px solid var(--line); flex-shrink:0;
+  }
+  header .logo{
+    width:36px; height:36px; border-radius:10px; background:var(--brand);
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; flex-shrink:0;
+  }
+  header .titles{flex:1; min-width:0;}
+  header h1{margin:0; font-size:1rem; font-weight:700; letter-spacing:-.01em;}
+  header .streak{margin:0; font-size:.72rem; color:var(--muted);}
+  header .icon-btn{
+    border:none; background:var(--brand-light); color:var(--brand-dark); width:36px; height:36px;
+    border-radius:10px; font-size:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+
+  /* ---------- views ---------- */
+  .view{flex:1; min-height:0; display:none; flex-direction:column;}
+  .view.active{display:flex;}
+
+  /* ---------- chat view ---------- */
+  #chatLog{
+    flex:1; min-height:0; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:.6rem;
+  }
+  .bubble-row{display:flex; gap:.5rem; max-width:88%;}
+  .bubble-row.user{align-self:flex-end; flex-direction:row-reverse;}
+  .bubble-row.ai{align-self:flex-start;}
+  .bubble{
+    padding:.6rem .85rem; border-radius:var(--radius); font-size:.92rem; line-height:1.4; word-wrap:break-word;
+  }
+  .bubble-row.user .bubble{background:var(--user-bubble); color:var(--user-bubble-ink); border-bottom-right-radius:4px;}
+  .bubble-row.ai .bubble{background:var(--ai-bubble); color:var(--ai-bubble-ink); border-bottom-left-radius:4px;}
+  .replay-btn{
+    border:none; background:none; color:var(--muted); font-size:.95rem; padding:.3rem; flex-shrink:0; align-self:flex-end;
+  }
+  .empty-state{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    padding:2rem 1.5rem; color:var(--muted); gap:.5rem;
+  }
+  .empty-state .big-emoji{font-size:2.4rem;}
+  .empty-state h2{margin:.25rem 0 0; color:var(--ink); font-size:1.05rem;}
+  .empty-state p{margin:0; font-size:.85rem; max-width:300px;}
+  .starters{display:flex; flex-wrap:wrap; gap:.4rem; justify-content:center; margin-top:.75rem;}
+  .starter-chip{
+    border:1px solid var(--line); background:var(--card); color:var(--brand-dark);
+    border-radius:999px; padding:.4rem .75rem; font-size:.78rem; cursor:pointer;
+  }
+
+  /* ---------- status strip ---------- */
+  #statusStrip{
+    text-align:center; font-size:.78rem; color:var(--muted); padding:.25rem 0; min-height:1.2rem;
+  }
+  #statusStrip.listening{color:var(--brand-dark); font-weight:600;}
+  #statusStrip.err{color:var(--danger); font-weight:600;}
+
+  /* ---------- controls ---------- */
+  #controls{
+    flex-shrink:0; padding:.5rem 1rem calc(.85rem + var(--safe-bottom));
+    display:flex; align-items:center; justify-content:center; gap:1rem;
+    background:var(--card); border-top:1px solid var(--line);
+  }
+  #endBtn{
+    border:1px solid var(--line); background:var(--card); color:var(--muted);
+    border-radius:12px; padding:.6rem .9rem; font-size:.78rem; font-weight:600;
+  }
+  #micBtn{
+    width:68px; height:68px; border-radius:50%; border:none; background:var(--brand); color:#fff;
+    font-size:26px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    box-shadow:0 4px 16px rgba(14,124,102,.35); transition:transform .15s;
+  }
+  #micBtn.listening{background:var(--danger); animation:pulse 1.4s infinite;}
+  #micBtn.thinking{background:var(--muted);}
+  #micBtn:disabled{opacity:.5;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(192,57,43,.45);}
+    70%{box-shadow:0 0 0 16px rgba(192,57,43,0);}
+    100%{box-shadow:0 0 0 0 rgba(192,57,43,0);}
+  }
+  #typeBtn{
+    border:1px solid var(--line); background:var(--card); color:var(--muted);
+    border-radius:12px; padding:.6rem .9rem; font-size:.78rem; font-weight:600;
+  }
+
+  /* ---------- type fallback bar ---------- */
+  #typeBar{display:none; gap:.5rem; padding:.6rem 1rem; background:var(--card); border-top:1px solid var(--line);}
+  #typeBar.active{display:flex;}
+  #typeInput{
+    flex:1; border:1px solid var(--line); border-radius:12px; padding:.6rem .8rem; font-size:.9rem; min-width:0;
+  }
+  #typeSend{border:none; background:var(--brand); color:#fff; border-radius:12px; padding:0 1rem; font-weight:600;}
+
+  /* ---------- other views (history / settings / review) share this card style ---------- */
+  .scroll-view{flex:1; min-height:0; overflow-y:auto; padding:1rem;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:1rem; margin-bottom:.75rem;}
+  .card h3{margin:0 0 .5rem; font-size:.95rem;}
+  .day-card summary{cursor:pointer; font-weight:600; font-size:.9rem; list-style:none; display:flex; justify-content:space-between; align-items:center;}
+  .day-card summary::-webkit-details-marker{display:none;}
+  .day-card .meta{font-weight:400; color:var(--muted); font-size:.78rem;}
+  .corr-item{border-left:3px solid var(--brand); padding:.4rem .6rem; margin-top:.5rem; background:var(--brand-light); border-radius:0 8px 8px 0;}
+  .corr-item .wrong{color:var(--danger); text-decoration:line-through; font-size:.85rem;}
+  .corr-item .right{color:var(--brand-dark); font-weight:600; font-size:.88rem;}
+  .corr-item .why{color:var(--muted); font-size:.78rem; margin-top:.15rem;}
+  .back-row{display:flex; align-items:center; gap:.6rem; padding:.85rem 1rem; background:var(--card); border-bottom:1px solid var(--line);}
+  .back-row button{border:none; background:var(--brand-light); color:var(--brand-dark); width:34px; height:34px; border-radius:10px; font-size:16px;}
+  .back-row h2{margin:0; font-size:.98rem;}
+  .empty-small{color:var(--muted); text-align:center; padding:2rem 1rem; font-size:.85rem;}
+
+  .setting-row{display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.6rem 0; border-bottom:1px solid var(--line);}
+  .setting-row:last-child{border-bottom:none;}
+  .setting-row label{font-size:.85rem; font-weight:600;}
+  .setting-row .hint{font-size:.72rem; color:var(--muted); font-weight:400; margin-top:.15rem;}
+  select, input[type=range]{font-size:.85rem;}
+  select{padding:.4rem .5rem; border-radius:8px; border:1px solid var(--line); background:#fff; max-width:160px;}
+
+  .loading-dots::after{content:"\2026"; animation:dots 1.2s steps(4,end) infinite;}
+  @keyframes dots{0%,20%{content:"";}40%{content:".";}60%{content:"..";}80%,100%{content:"...";}}
+
+  .toast{
+    position:fixed; left:50%; bottom:calc(100px + var(--safe-bottom)); transform:translateX(-50%);
+    background:#16231F; color:#fff; padding:.55rem .9rem; border-radius:10px; font-size:.8rem;
+    opacity:0; pointer-events:none; transition:opacity .25s; z-index:50; max-width:85%; text-align:center;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header>
+    <div class="logo">🗣️</div>
+    <div class="titles">
+      <h1>English Buddy</h1>
+      <p class="streak" id="streakLine">Tap the mic and say hello</p>
+    </div>
+    <button class="icon-btn" id="historyBtn" title="History" aria-label="History">📅</button>
+    <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙️</button>
+  </header>
+
+  <!-- ===================== CHAT VIEW ===================== -->
+  <div class="view active" id="view-chat">
+    <div id="chatLog">
+      <div class="empty-state" id="emptyState">
+        <div class="big-emoji">👋</div>
+        <h2>Let's practice English!</h2>
+        <p>Tap the mic button and start talking. I'll chat with you like a friend — no corrections during the chat, just a friendly conversation. Tap "Finish & Review" anytime to see your corrections.</p>
+        <div class="starters">
+          <button class="starter-chip" data-starter="Tell me about your day so far.">Your day so far</button>
+          <button class="starter-chip" data-starter="What do you do for work?">My work</button>
+          <button class="starter-chip" data-starter="What's your favorite food?">Favorite food</button>
+          <button class="starter-chip" data-starter="Tell me about your weekend plans.">Weekend plans</button>
+        </div>
+      </div>
+    </div>
+    <div id="statusStrip">Tap the mic to begin</div>
+    <div id="typeBar">
+      <input id="typeInput" type="text" placeholder="Type instead of speaking…" autocomplete="off">
+      <button id="typeSend">Send</button>
+    </div>
+    <div id="controls">
+      <button id="endBtn">Finish &amp; Review</button>
+      <button id="micBtn" aria-label="Speak">🎙️</button>
+      <button id="typeBtn" aria-label="Type instead">⌨️</button>
+    </div>
+  </div>
+
+  <!-- ===================== REVIEW VIEW ===================== -->
+  <div class="view" id="view-review">
+    <div class="back-row">
+      <button id="reviewBackBtn">←</button>
+      <h2>Today's corrections</h2>
+    </div>
+    <div class="scroll-view" id="reviewBody"></div>
+  </div>
+
+  <!-- ===================== HISTORY VIEW ===================== -->
+  <div class="view" id="view-history">
+    <div class="back-row">
+      <button id="historyBackBtn">←</button>
+      <h2>Practice history</h2>
+    </div>
+    <div class="scroll-view" id="historyBody"></div>
+  </div>
+
+  <!-- ===================== SETTINGS VIEW ===================== -->
+  <div class="view" id="view-settings">
+    <div class="back-row">
+      <button id="settingsBackBtn">←</button>
+      <h2>Settings</h2>
+    </div>
+    <div class="scroll-view">
+      <div class="card">
+        <div class="setting-row">
+          <div>
+            <label>AI voice</label>
+            <div class="hint">Which voice reads replies aloud</div>
+          </div>
+          <select id="voiceSelect"></select>
+        </div>
+        <div class="setting-row">
+          <div>
+            <label>Speaking speed</label>
+            <div class="hint">Slower can be easier to follow</div>
+          </div>
+          <input type="range" id="rateRange" min="0.6" max="1.3" step="0.05" value="0.95">
+        </div>
+        <div class="setting-row">
+          <div>
+            <label>Auto-listen</label>
+            <div class="hint">Mic opens again right after I reply</div>
+          </div>
+          <input type="checkbox" id="autoListen" checked>
+        </div>
+      </div>
+      <div class="card">
+        <h3>About</h3>
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.5;margin:0;">
+          English Buddy runs fully in your browser. Your conversations are saved only on this phone (nothing is uploaded anywhere except to the AI model to generate replies). Needs an internet connection and a free one-time sign-in to Puter (the free AI service that powers the replies) the very first time you use it.
+        </p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--danger);">Reset history</h3>
+        <p style="font-size:.82rem;color:var(--muted);margin:0 0 .6rem;">Deletes all saved conversations and your streak. Cannot be undone.</p>
+        <button id="resetBtn" style="border:1px solid var(--danger);background:#fff;color:var(--danger);border-radius:10px;padding:.5rem .9rem;font-size:.8rem;font-weight:600;">Clear all data</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="https://js.puter.com/v2/"></script>
+<script src="app.js"></script>
+</body>
+</html>
